@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     debug: bool = True
     host: str = "127.0.0.1"
-    port: int = 8000
+    port: int = 8005
     database_url: str = "sqlite:///./nexttrack.db"
 
 
