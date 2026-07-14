@@ -6,11 +6,38 @@ from app.core.enums import Activity, Genre, Mood
 
 
 class RecommendRequest(BaseModel):
-    recent_tracks: list[str] = Field(default_factory=list)
-    mood: Mood | None = None
-    activity: Activity | None = None
-    genre: Genre | None = None
-    avoid_repeated_artists: bool = False
+    """What the client sends in for a recommendation."""
+
+    recent_tracks: list[str] = Field(
+        default_factory=list,
+        description=(
+            "Catalogue track IDs from the current listening session. "
+            "May be empty only when at least one preference field is set."
+        ),
+        examples=[["track_001"]],
+    )
+    mood: Mood | None = Field(
+        default=None,
+        description="Optional mood preference from the locked mood vocabulary.",
+        examples=["focused"],
+    )
+    activity: Activity | None = Field(
+        default=None,
+        description="Optional activity context from the locked activity vocabulary.",
+        examples=["study"],
+    )
+    genre: Genre | None = Field(
+        default=None,
+        description="Optional genre preference from the locked genre vocabulary.",
+        examples=["lo-fi"],
+    )
+    avoid_repeated_artists: bool = Field(
+        default=False,
+        description=(
+            "When true, the eventual recommender should avoid artists already "
+            "present in recent_tracks."
+        ),
+    )
 
     @model_validator(mode="after")
     def require_history_or_preferences(self) -> "RecommendRequest":
@@ -26,15 +53,33 @@ class RecommendRequest(BaseModel):
 
 
 class TrackSummary(BaseModel):
-    id: str
-    title: str
-    artist: str
-    genre: str
-    moods: list[str]
-    activities: list[str]
+    """Track fields we send back."""
+
+    id: str = Field(description="Stable catalogue identifier.", examples=["track_014"])
+    title: str = Field(description="Track title.")
+    artist: str = Field(description="Primary artist name.")
+    genre: str = Field(description="Primary genre label for the track.")
+    moods: list[str] = Field(
+        description="Mood tags associated with the track.",
+        examples=[["focused", "calm"]],
+    )
+    activities: list[str] = Field(
+        description="Activity tags associated with the track.",
+        examples=[["study", "work"]],
+    )
 
 
 class RecommendResponse(BaseModel):
-    recommended_track: TrackSummary
-    score: float
-    reason: str
+    """Successful recommendation payload (populated in Phase 4)."""
+
+    recommended_track: TrackSummary = Field(
+        description="The top recommended catalogue track."
+    )
+    score: float = Field(
+        description="Relative ranking score for the recommendation.",
+        examples=[0.0],
+    )
+    reason: str = Field(
+        description="Short human-readable explanation of why the track was chosen.",
+        examples=["Matches focused study listening with lo-fi preference."],
+    )
