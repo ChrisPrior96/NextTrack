@@ -1,11 +1,16 @@
-"""Load and look up catalogue tracks from the local seed file."""
+"""Read tracks out of SQLite. Listening history does not go in here."""
 
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.db.models import Track
+from app.db.session import SessionLocal, init_db
 
 SEED_PATH = Path(__file__).resolve().parent.parent / "data" / "tracks.json"
 
@@ -49,19 +54,48 @@ def load_tracks_from_json(path: Path | None = None) -> list[TrackRecord]:
     return [_parse_track(item) for item in payload]
 
 
-@lru_cache
-def _track_index() -> dict[str, TrackRecord]:
-    return {track.id: track for track in load_tracks_from_json()}
+def _to_record(track: Track) -> TrackRecord:
+    return TrackRecord(
+        id=track.id,
+        title=track.title,
+        artist=track.artist,
+        genre=track.genre,
+        moods=tuple(track.moods or ()),
+        activities=tuple(track.activities or ()),
+    )
+
+
+class CatalogueRepository:
+    """SQLite reads for tracks. Do not put listening history in here."""
+
+    def __init__(self, session: Session) -> None:
+        self._session = session
+
+    def get_all(self) -> list[TrackRecord]:
+        rows = self._session.scalars(select(Track).order_by(Track.id)).all()
+        return [_to_record(row) for row in rows]
+
+    def get_by_id(self, track_id: str) -> TrackRecord:
+        row = self._session.get(Track, track_id)
+        if row is None:
+            raise TrackNotFoundError(track_id)
+        return _to_record(row)
+
+
+def get_catalogue(session: Session) -> CatalogueRepository:
+    """Wrap a session in CatalogueRepository."""
+    return CatalogueRepository(session)
 
 
 def get_all() -> list[TrackRecord]:
-    """Return every track from the seed catalogue."""
-    return list(_track_index().values())
+    """All tracks in the DB."""
+    init_db()
+    with SessionLocal() as session:
+        return CatalogueRepository(session).get_all()
 
 
 def get_by_id(track_id: str) -> TrackRecord:
-    """Return a single track or raise TrackNotFoundError."""
-    try:
-        return _track_index()[track_id]
-    except KeyError as exc:
-        raise TrackNotFoundError(track_id) from exc
+    """One track by id, or TrackNotFoundError."""
+    init_db()
+    with SessionLocal() as session:
+        return CatalogueRepository(session).get_by_id(track_id)
