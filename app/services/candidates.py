@@ -7,6 +7,13 @@ from collections.abc import Sequence
 from app.services.catalogue import TrackRecord
 
 
+class NoCandidatesError(LookupError):
+    """Nothing left to recommend after we filtered."""
+
+    def __init__(self, message: str = "No eligible candidate tracks found") -> None:
+        super().__init__(message)
+
+
 def _exclude_recent(
     catalogue: Sequence[TrackRecord],
     recent_tracks: Sequence[str],
@@ -51,13 +58,18 @@ def _preference_values(
 
 
 def _matches_all_preferences(track: TrackRecord, preferences: dict[str, str]) -> bool:
-    if "mood" in preferences and preferences["mood"] not in track.moods:
-        return False
-    if "activity" in preferences and preferences["activity"] not in track.activities:
-        return False
-    if "genre" in preferences and track.genre != preferences["genre"]:
-        return False
-    return True
+    return _preference_overlap(track, preferences) == len(preferences)
+
+
+def _preference_overlap(track: TrackRecord, preferences: dict[str, str]) -> int:
+    score = 0
+    if "mood" in preferences and preferences["mood"] in track.moods:
+        score += 1
+    if "activity" in preferences and preferences["activity"] in track.activities:
+        score += 1
+    if "genre" in preferences and track.genre == preferences["genre"]:
+        score += 1
+    return score
 
 
 def _filter_exact(
@@ -67,6 +79,26 @@ def _filter_exact(
     if not preferences:
         return list(candidates)
     return [track for track in candidates if _matches_all_preferences(track, preferences)]
+
+
+def _filter_partial(
+    candidates: Sequence[TrackRecord],
+    preferences: dict[str, str],
+) -> list[TrackRecord]:
+    """Partial fallback: keep whatever matched the most prefs (but at least one)."""
+    if not preferences:
+        return []
+
+    scored = [
+        (track, _preference_overlap(track, preferences))
+        for track in candidates
+    ]
+    positive = [(track, score) for track, score in scored if score > 0]
+    if not positive:
+        return []
+
+    best = max(score for _, score in positive)
+    return [track for track, score in positive if score == best]
 
 
 def generate_candidates(
@@ -79,9 +111,10 @@ def generate_candidates(
     genre: str | None = None,
 ) -> list[TrackRecord]:
     """
-    Return eligible tracks after history exclusions and exact preference matching.
+    Filter catalogue down to eligible tracks.
 
-    Partial and general catalogue fallbacks are added next.
+    Try exact prefs first, then partial, then anything left.
+    Does not score — that is scoring.py's job.
     """
     eligible = _exclude_recent(catalogue, recent_tracks)
     if avoid_repeated_artists:
@@ -89,4 +122,21 @@ def generate_candidates(
         eligible = _exclude_repeated_artists(eligible, blocked)
 
     preferences = _preference_values(mood, activity, genre)
-    return _filter_exact(eligible, preferences)
+
+    if not preferences:
+        if not eligible:
+            raise NoCandidatesError()
+        return eligible
+
+    exact = _filter_exact(eligible, preferences)
+    if exact:
+        return exact
+
+    partial = _filter_partial(eligible, preferences)
+    if partial:
+        return partial
+
+    if eligible:
+        return eligible
+
+    raise NoCandidatesError()
