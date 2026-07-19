@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from app.services.catalogue import TrackRecord
+from app.services.explanation import build_reason
+from app.services.recommendation import recommend_track
 from app.services.scoring import (
     ScoringContext,
     build_scoring_context,
+    rank_candidates,
     score_track,
 )
 
@@ -99,3 +102,90 @@ def test_unknown_recent_ids_are_ignored_in_context() -> None:
     assert context.recent_genres == frozenset({"rock"})
     assert context.recent_artists == frozenset({"Alpha"})
     assert context.last_track_genre == "rock"
+
+
+def test_rank_candidates_uses_score_then_stable_id_tiebreak() -> None:
+    catalogue = [
+        _track("t2", artist="B", genre="lo-fi", moods=("focused",), activities=("study",)),
+        _track("t1", artist="A", genre="lo-fi", moods=("focused",), activities=("study",)),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    ranked = rank_candidates(catalogue, context)
+    assert [item.track.id for item in ranked] == ["t1", "t2"]
+    assert ranked[0].breakdown.total == ranked[1].breakdown.total
+
+
+def test_rank_candidates_prefers_higher_total_score() -> None:
+    catalogue = [
+        _track("t1", artist="A", genre="rock", moods=("happy",), activities=("party",)),
+        _track("t2", artist="B", genre="lo-fi", moods=("focused",), activities=("study",)),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    ranked = rank_candidates(catalogue, context)
+    assert ranked[0].track.id == "t2"
+    assert ranked[0].breakdown.total > ranked[1].breakdown.total
+
+
+def test_build_reason_mentions_positive_factors() -> None:
+    track = _track(
+        "t2",
+        artist="Beta",
+        genre="lo-fi",
+        moods=("focused",),
+        activities=("study",),
+    )
+    context = ScoringContext(mood="focused", activity="study", genre="lo-fi")
+    breakdown = score_track(track, context)
+    reason = build_reason(
+        breakdown,
+        track,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert "Beta" in reason
+    assert "preferred genre" in reason or "lo-fi" in reason
+    assert "focused" in reason
+    assert "study" in reason
+
+
+def test_recommend_track_returns_stable_top_pick() -> None:
+    catalogue = [
+        _track("t1", artist="Alpha", genre="lo-fi", moods=("focused",), activities=("study",)),
+        _track(
+            "t2",
+            artist="Beta",
+            genre="lo-fi",
+            moods=("focused",),
+            activities=("study",),
+        ),
+        _track("t3", artist="Gamma", genre="rock", moods=("energetic",), activities=("workout",)),
+    ]
+    first = recommend_track(
+        catalogue,
+        recent_tracks=["t3"],
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    second = recommend_track(
+        catalogue,
+        recent_tracks=["t3"],
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert first.track.id == "t1"
+    assert second.track.id == "t1"
+    assert first.track.id != "t3"
+    assert "focused" in first.reason or "study" in first.reason or "genre" in first.reason
