@@ -134,3 +134,29 @@ def score_track(
 
     total = sum(components.values())
     return ScoreBreakdown(total=total, components=components)
+
+
+@dataclass(frozen=True, slots=True)
+class RankedCandidate:
+    """Track + its score."""
+
+    track: TrackRecord
+    breakdown: ScoreBreakdown
+
+
+def rank_candidates(
+    candidates: Sequence[TrackRecord],
+    context: ScoringContext,
+    weights: ScoringWeights = DEFAULT_WEIGHTS,
+) -> list[RankedCandidate]:
+    """
+    Score everyone then sort.
+
+    Ties: higher score wins, then lower track.id so results stay stable.
+    """
+    ranked = [
+        RankedCandidate(track=track, breakdown=score_track(track, context, weights))
+        for track in candidates
+    ]
+    ranked.sort(key=lambda item: (-item.breakdown.total, item.track.id))
+    return ranked
