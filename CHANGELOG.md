@@ -10,3 +10,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Repository bootstrap: ignore rules, dependency lists, and pytest configuration
 - FastAPI application scaffold with `GET /health`
+- Locked recommend API contract with enums and validation
+- Local JSON catalogue seeded into SQLite (track metadata only)
+- Candidate generation with history/artist exclusions and preference fallbacks
+- Transparent scoring, ranking, explanations, and working `POST /recommend`
+
+### Changed
+
+- `POST /recommend` now returns a scored track instead of HTTP 501

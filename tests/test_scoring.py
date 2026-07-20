@@ -1,0 +1,191 @@
+"""Scoring unit tests."""
+
+from __future__ import annotations
+
+from app.services.catalogue import TrackRecord
+from app.services.explanation import build_reason
+from app.services.recommendation import recommend_track
+from app.services.scoring import (
+    ScoringContext,
+    build_scoring_context,
+    rank_candidates,
+    score_track,
+)
+
+
+def _track(
+    track_id: str,
+    *,
+    artist: str,
+    genre: str,
+    moods: tuple[str, ...] = (),
+    activities: tuple[str, ...] = (),
+) -> TrackRecord:
+    return TrackRecord(
+        id=track_id,
+        title=track_id,
+        artist=artist,
+        genre=genre,
+        moods=moods,
+        activities=activities,
+    )
+
+
+def test_score_applies_preference_and_history_signals() -> None:
+    catalogue = [
+        _track("t1", artist="Alpha", genre="lo-fi", moods=("focused",), activities=("study",)),
+        _track("t2", artist="Beta", genre="lo-fi", moods=("focused",), activities=("study",)),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        recent_tracks=["t1"],
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+        avoid_repeated_artists=False,
+    )
+    breakdown = score_track(catalogue[1], context)
+
+    assert breakdown.components["preferred_genre_match"] == 3.0
+    assert breakdown.components["mood_match"] == 2.5
+    assert breakdown.components["activity_match"] == 2.5
+    assert breakdown.components["shared_genre_with_recent"] == 1.5
+    assert breakdown.components["continuity_last_genre"] == 1.0
+    assert breakdown.components["shared_artist_with_recent"] == 0.0
+    assert breakdown.components["soft_artist_repeat_penalty"] == 0.0
+    assert breakdown.components["preference_conflict"] == 0.0
+    assert breakdown.total == 10.5
+
+
+def test_soft_artist_repeat_bonus_and_penalty() -> None:
+    catalogue = [
+        _track("t1", artist="Alpha", genre="lo-fi"),
+        _track("t2", artist="Alpha", genre="indie", moods=("happy",)),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        recent_tracks=["t1"],
+        avoid_repeated_artists=False,
+    )
+    breakdown = score_track(catalogue[1], context)
+
+    assert breakdown.components["shared_artist_with_recent"] == 0.5
+    assert breakdown.components["soft_artist_repeat_penalty"] == -2.0
+    assert breakdown.total == -1.5
+
+
+def test_preference_conflict_penalty_when_partial_fit() -> None:
+    track = _track(
+        "t9",
+        artist="Gamma",
+        genre="jazz",
+        moods=("focused",),
+        activities=("work",),
+    )
+    context = ScoringContext(
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    breakdown = score_track(track, context)
+
+    assert breakdown.components["mood_match"] == 2.5
+    assert breakdown.components["activity_match"] == 0.0
+    assert breakdown.components["preferred_genre_match"] == 0.0
+    assert breakdown.components["preference_conflict"] == -4.0
+    assert breakdown.total == -1.5
+
+
+def test_unknown_recent_ids_are_ignored_in_context() -> None:
+    catalogue = [_track("t1", artist="Alpha", genre="rock")]
+    context = build_scoring_context(catalogue, recent_tracks=["missing", "t1"])
+    assert context.recent_genres == frozenset({"rock"})
+    assert context.recent_artists == frozenset({"Alpha"})
+    assert context.last_track_genre == "rock"
+
+
+def test_rank_candidates_uses_score_then_stable_id_tiebreak() -> None:
+    catalogue = [
+        _track("t2", artist="B", genre="lo-fi", moods=("focused",), activities=("study",)),
+        _track("t1", artist="A", genre="lo-fi", moods=("focused",), activities=("study",)),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    ranked = rank_candidates(catalogue, context)
+    assert [item.track.id for item in ranked] == ["t1", "t2"]
+    assert ranked[0].breakdown.total == ranked[1].breakdown.total
+
+
+def test_rank_candidates_prefers_higher_total_score() -> None:
+    catalogue = [
+        _track("t1", artist="A", genre="rock", moods=("happy",), activities=("party",)),
+        _track("t2", artist="B", genre="lo-fi", moods=("focused",), activities=("study",)),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    ranked = rank_candidates(catalogue, context)
+    assert ranked[0].track.id == "t2"
+    assert ranked[0].breakdown.total > ranked[1].breakdown.total
+
+
+def test_build_reason_mentions_positive_factors() -> None:
+    track = _track(
+        "t2",
+        artist="Beta",
+        genre="lo-fi",
+        moods=("focused",),
+        activities=("study",),
+    )
+    context = ScoringContext(mood="focused", activity="study", genre="lo-fi")
+    breakdown = score_track(track, context)
+    reason = build_reason(
+        breakdown,
+        track,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert "Beta" in reason
+    assert "preferred genre" in reason or "lo-fi" in reason
+    assert "focused" in reason
+    assert "study" in reason
+
+
+def test_recommend_track_returns_stable_top_pick() -> None:
+    catalogue = [
+        _track("t1", artist="Alpha", genre="lo-fi", moods=("focused",), activities=("study",)),
+        _track(
+            "t2",
+            artist="Beta",
+            genre="lo-fi",
+            moods=("focused",),
+            activities=("study",),
+        ),
+        _track("t3", artist="Gamma", genre="rock", moods=("energetic",), activities=("workout",)),
+    ]
+    first = recommend_track(
+        catalogue,
+        recent_tracks=["t3"],
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    second = recommend_track(
+        catalogue,
+        recent_tracks=["t3"],
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert first.track.id == "t1"
+    assert second.track.id == "t1"
+    assert first.track.id != "t3"
+    assert "focused" in first.reason or "study" in first.reason or "genre" in first.reason
