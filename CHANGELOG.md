@@ -14,7 +14,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Local JSON catalogue seeded into SQLite (track metadata only)
 - Candidate generation with history/artist exclusions and preference fallbacks
 - Transparent scoring, ranking, explanations, and working `POST /recommend`
+- Hardened error matrix, privacy tests, and marker-ready README
 
 ### Changed
 
 - `POST /recommend` now returns a scored track instead of HTTP 501
+- README is versioned again for run/privacy instructions

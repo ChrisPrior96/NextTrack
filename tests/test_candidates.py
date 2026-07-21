@@ -206,6 +206,35 @@ def test_does_not_select_a_single_best_track(catalogue: list[TrackRecord]) -> No
     assert _ids(result) == {"t1", "t4", "t5"}
 
 
+def test_fallback_stages_are_ordered_exact_then_partial_then_general(
+    catalogue: list[TrackRecord],
+) -> None:
+    """Fallback order we promised: exact, then partial, then anything."""
+    exact = generate_candidates(
+        catalogue,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert _ids(exact) == {"t1"}
+
+    partial = generate_candidates(
+        catalogue,
+        mood="focused",
+        activity="party",
+        genre="lo-fi",
+    )
+    assert _ids(partial) == {"t1"}
+
+    general = generate_candidates(
+        catalogue,
+        recent_tracks=["t1"],
+        mood="bored",
+        genre="classical",
+    )
+    assert _ids(general) == {"t2", "t3", "t4", "t5"}
+
+
 def test_activity_only_exact_match(catalogue: list[TrackRecord]) -> None:
     result = generate_candidates(catalogue, activity="workout")
     assert _ids(result) == {"t3"}
