@@ -44,5 +44,4 @@ Thumbs.db
 .cache/
 
 # Local project docs (kept on disk, not versioned)
-README.md
 docs/DEVELOPMENT.md

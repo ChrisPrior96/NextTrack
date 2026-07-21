@@ -56,7 +56,15 @@ def test_recommend_unknown_recent_track_returns_400(client: TestClient) -> None:
         json={"recent_tracks": ["track_does_not_exist"], "mood": "focused"},
     )
     assert response.status_code == 400
-    assert "Unknown track id" in response.json()["detail"]
+    assert response.json() == {"detail": "Unknown track id(s): track_does_not_exist"}
+
+
+def test_recommend_blank_recent_track_returns_422(client: TestClient) -> None:
+    response = client.post(
+        "/recommend",
+        json={"recent_tracks": ["  "], "mood": "focused"},
+    )
+    assert response.status_code == 422
 
 
 def test_recommend_no_candidates_returns_404(client: TestClient) -> None:
@@ -67,6 +75,7 @@ def test_recommend_no_candidates_returns_404(client: TestClient) -> None:
         json={"recent_tracks": all_ids},
     )
     assert response.status_code == 404
+    assert response.json() == {"detail": "No eligible candidate tracks found"}
 
 
 def test_recommend_openapi_includes_models(client: TestClient) -> None:

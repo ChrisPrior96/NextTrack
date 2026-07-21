@@ -1,7 +1,12 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter
 
 from app.api.deps import http_error_for_domain
-from app.models.schemas import RecommendRequest, RecommendResponse, TrackSummary
+from app.models.schemas import (
+    ErrorResponse,
+    RecommendRequest,
+    RecommendResponse,
+    TrackSummary,
+)
 from app.services.candidates import NoCandidatesError
 from app.services.recommendation import (
     UnknownTrackIdsError,
@@ -28,19 +33,35 @@ def _to_summary(track) -> TrackSummary:
     summary="Recommend the next track",
     description=(
         "Validate listening session context and preferences, then return the "
-        "top-scoring eligible catalogue track with a numeric score and reason."
+        "top-scoring eligible catalogue track with a numeric score and reason.\n\n"
+        "Error matrix:\n"
+        "- **422** validation failure (bad enums, empty context, blank track ids)\n"
+        "- **400** one or more `recent_tracks` ids are unknown\n"
+        "- **404** no eligible candidates remain after exclusions/fallbacks"
     ),
     responses={
         400: {
-            "description": "One or more recent_tracks ids are not in the catalogue."
+            "model": ErrorResponse,
+            "description": "One or more recent_tracks ids are not in the catalogue.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Unknown track id(s): track_missing"}
+                }
+            },
         },
         404: {
-            "description": "No eligible candidate tracks remain after exclusions."
+            "model": ErrorResponse,
+            "description": "No eligible candidate tracks remain after exclusions.",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "No eligible candidate tracks found"}
+                }
+            },
         },
         422: {
             "description": (
-                "Request failed validation (invalid enum, malformed body, or "
-                "empty context with neither recent tracks nor preferences)."
+                "Request failed validation (invalid enum, malformed body, blank "
+                "track ids, or empty context with neither recent tracks nor preferences)."
             )
         },
     },

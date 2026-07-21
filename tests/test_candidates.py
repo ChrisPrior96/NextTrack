@@ -204,3 +204,75 @@ def test_does_not_select_a_single_best_track(catalogue: list[TrackRecord]) -> No
     result = generate_candidates(catalogue, mood="focused")
     assert len(result) > 1
     assert _ids(result) == {"t1", "t4", "t5"}
+
+
+def test_fallback_stages_are_ordered_exact_then_partial_then_general(
+    catalogue: list[TrackRecord],
+) -> None:
+    """Fallback order we promised: exact, then partial, then anything."""
+    exact = generate_candidates(
+        catalogue,
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert _ids(exact) == {"t1"}
+
+    partial = generate_candidates(
+        catalogue,
+        mood="focused",
+        activity="party",
+        genre="lo-fi",
+    )
+    assert _ids(partial) == {"t1"}
+
+    general = generate_candidates(
+        catalogue,
+        recent_tracks=["t1"],
+        mood="bored",
+        genre="classical",
+    )
+    assert _ids(general) == {"t2", "t3", "t4", "t5"}
+
+
+def test_activity_only_exact_match(catalogue: list[TrackRecord]) -> None:
+    result = generate_candidates(catalogue, activity="workout")
+    assert _ids(result) == {"t3"}
+
+
+def test_mood_only_exact_match(catalogue: list[TrackRecord]) -> None:
+    result = generate_candidates(catalogue, mood="happy")
+    assert _ids(result) == {"t5"}
+
+
+def test_partial_then_general_when_overlap_zero_after_exclusions(
+    catalogue: list[TrackRecord],
+) -> None:
+    # Exclude the only rock track; request rock with no other overlap → general.
+    result = generate_candidates(
+        catalogue,
+        recent_tracks=["t3"],
+        genre="classical",
+        mood="bored",
+    )
+    assert _ids(result) == {"t1", "t2", "t4", "t5"}
+
+
+def test_empty_catalogue_raises() -> None:
+    with pytest.raises(NoCandidatesError):
+        generate_candidates([], recent_tracks=[], mood="focused")
+
+
+def test_recent_exclusion_before_preference_filter(
+    catalogue: list[TrackRecord],
+) -> None:
+    # t1 is the only exact lo-fi+focused+study match; excluding it forces fallback.
+    result = generate_candidates(
+        catalogue,
+        recent_tracks=["t1"],
+        mood="focused",
+        activity="study",
+        genre="lo-fi",
+    )
+    assert "t1" not in _ids(result)
+    assert len(result) >= 1
