@@ -189,3 +189,64 @@ def test_recommend_track_returns_stable_top_pick() -> None:
     assert second.track.id == "t1"
     assert first.track.id != "t3"
     assert "focused" in first.reason or "study" in first.reason or "genre" in first.reason
+
+
+def test_score_without_preferences_uses_history_signals_only() -> None:
+    catalogue = [
+        _track("t1", artist="Alpha", genre="lo-fi"),
+        _track("t2", artist="Beta", genre="lo-fi"),
+    ]
+    context = build_scoring_context(catalogue, recent_tracks=["t1"])
+    breakdown = score_track(catalogue[1], context)
+    assert breakdown.components["shared_genre_with_recent"] == 1.5
+    assert breakdown.components["continuity_last_genre"] == 1.0
+    assert breakdown.components["preferred_genre_match"] == 0.0
+    assert breakdown.total == 2.5
+
+
+def test_avoid_repeated_artists_skips_soft_artist_signals() -> None:
+    catalogue = [
+        _track("t1", artist="Alpha", genre="lo-fi"),
+        _track("t2", artist="Alpha", genre="indie"),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        recent_tracks=["t1"],
+        avoid_repeated_artists=True,
+    )
+    breakdown = score_track(catalogue[1], context)
+    assert breakdown.components["shared_artist_with_recent"] == 0.0
+    assert breakdown.components["soft_artist_repeat_penalty"] == 0.0
+
+
+def test_build_reason_mentions_penalties() -> None:
+    track = _track("t2", artist="Alpha", genre="indie")
+    context = ScoringContext(
+        recent_artists=frozenset({"Alpha"}),
+        avoid_repeated_artists=False,
+        mood="focused",
+        genre="lo-fi",
+    )
+    breakdown = score_track(track, context)
+    reason = build_reason(breakdown, track, mood="focused", genre="lo-fi")
+    assert "penalty" in reason or "partially matches" in reason
+
+
+def test_build_reason_when_no_contributing_components() -> None:
+    track = _track("t9", artist="Zed", genre="folk")
+    context = ScoringContext()
+    breakdown = score_track(track, context)
+    reason = build_reason(breakdown, track)
+    assert "eligible catalogue match" in reason
+
+
+def test_last_track_genre_uses_last_resolvable_id() -> None:
+    catalogue = [
+        _track("t1", artist="A", genre="jazz"),
+        _track("t2", artist="B", genre="rock"),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        recent_tracks=["t1", "missing", "t2"],
+    )
+    assert context.last_track_genre == "rock"
