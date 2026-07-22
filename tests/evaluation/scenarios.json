@@ -1,0 +1,162 @@
+[
+  {
+    "id": "study_focused_lofi_history",
+    "description": "Study + focused + lo-fi with short lo-fi history",
+    "request": {
+      "recent_tracks": ["track_001"],
+      "mood": "focused",
+      "activity": "study",
+      "genre": "lo-fi",
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "prefer_genre": "lo-fi",
+      "prefer_mood": "focused",
+      "prefer_activity": "study",
+      "min_preference_hits": 2
+    }
+  },
+  {
+    "id": "party_excited_electronic_history",
+    "description": "Party + excited with electronic history",
+    "request": {
+      "recent_tracks": ["track_008", "track_009"],
+      "mood": "excited",
+      "activity": "party",
+      "genre": "electronic",
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "prefer_genre": "electronic",
+      "prefer_mood": "excited",
+      "prefer_activity": "party",
+      "min_preference_hits": 2
+    }
+  },
+  {
+    "id": "preferences_only_no_history",
+    "description": "Preferences only (no listening history)",
+    "request": {
+      "recent_tracks": [],
+      "mood": "calm",
+      "activity": "relax",
+      "genre": "ambient",
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "prefer_genre": "ambient",
+      "prefer_mood": "calm",
+      "prefer_activity": "relax",
+      "min_preference_hits": 2
+    }
+  },
+  {
+    "id": "history_only_no_prefs",
+    "description": "History only (no explicit preferences)",
+    "request": {
+      "recent_tracks": ["track_023", "track_024"],
+      "mood": null,
+      "activity": null,
+      "genre": null,
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "min_preference_hits": 0
+    }
+  },
+  {
+    "id": "avoid_repeated_artists_on",
+    "description": "Avoid artists already present in recent history",
+    "request": {
+      "recent_tracks": ["track_001", "track_002"],
+      "mood": "focused",
+      "activity": "study",
+      "genre": null,
+      "avoid_repeated_artists": true
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "avoid_artists_from_recent": true,
+      "prefer_mood": "focused",
+      "prefer_activity": "study",
+      "min_preference_hits": 1
+    }
+  },
+  {
+    "id": "conflicting_prefs_fallback",
+    "description": "Conflicting preferences force fallback beyond exact match",
+    "request": {
+      "recent_tracks": ["track_015"],
+      "mood": "focused",
+      "activity": "party",
+      "genre": "classical",
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "allow_partial_or_general": true,
+      "min_preference_hits": 0
+    }
+  },
+  {
+    "id": "long_history_near_exhaustion",
+    "description": "Long history nearly exhausting the catalogue",
+    "request": {
+      "recent_tracks": [
+        "track_001", "track_002", "track_003", "track_004", "track_005",
+        "track_006", "track_007", "track_008", "track_009", "track_010",
+        "track_011", "track_012", "track_013", "track_014", "track_015",
+        "track_016", "track_017", "track_018", "track_019", "track_020",
+        "track_021", "track_022", "track_023", "track_024", "track_025",
+        "track_026", "track_027", "track_028", "track_029"
+      ],
+      "mood": "calm",
+      "activity": "relax",
+      "genre": null,
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "allowed_ids": ["track_030", "track_031", "track_032"],
+      "min_preference_hits": 0
+    }
+  },
+  {
+    "id": "genre_continuity_from_last_track",
+    "description": "Genre continuity from the last track in history",
+    "request": {
+      "recent_tracks": ["track_019", "track_027"],
+      "mood": null,
+      "activity": null,
+      "genre": null,
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "prefer_continuity_genre": "jazz",
+      "min_preference_hits": 0
+    }
+  },
+  {
+    "id": "workout_energetic_rock",
+    "description": "Workout + energetic with rock-leaning history",
+    "request": {
+      "recent_tracks": ["track_023"],
+      "mood": "energetic",
+      "activity": "workout",
+      "genre": "rock",
+      "avoid_repeated_artists": false
+    },
+    "expectations": {
+      "recommended_not_in_recent": true,
+      "prefer_genre": "rock",
+      "prefer_mood": "energetic",
+      "prefer_activity": "workout",
+      "min_preference_hits": 2
+    }
+  }
+]
