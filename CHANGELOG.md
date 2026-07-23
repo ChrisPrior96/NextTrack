@@ -15,6 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Candidate generation with history/artist exclusions and preference fallbacks
 - Transparent scoring, ranking, explanations, and working `POST /recommend`
 - Hardened error matrix, privacy tests, and marker-ready README
+- Offline evaluation scenarios and scored-vs-random baseline results ([docs/evaluation/RESULTS.md](docs/evaluation/RESULTS.md))
 
 ### Changed
 
