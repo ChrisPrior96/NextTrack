@@ -19,6 +19,13 @@ class Settings(BaseSettings):
     port: int = 8005
     database_url: str = "sqlite:///./nexttrack.db"
 
+    # MusicBrainz stuff — leave off unless you actually want live lookups
+    musicbrainz_enabled: bool = False
+    musicbrainz_base_url: str = "https://musicbrainz.org/ws/2"
+    musicbrainz_user_agent: str = "NextTrack/1.0 (https://example.local/nexttrack)"
+    musicbrainz_min_interval_seconds: float = 1.0
+    musicbrainz_timeout_seconds: float = 5.0
+
 
 @lru_cache
 def get_settings() -> Settings:
