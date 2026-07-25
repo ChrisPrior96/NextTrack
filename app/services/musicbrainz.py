@@ -2,18 +2,31 @@
 
 from __future__ import annotations
 
+import json
+import re
 import threading
 import time
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
+from sqlalchemy.orm import Session
 
 from app.core.config import Settings, get_settings
+from app.db.models import MusicBrainzCache
+from app.services.catalogue import TrackRecord
 
 
 class MusicBrainzError(RuntimeError):
     """MusicBrainz call failed / weird response."""
+
+
+_WHITESPACE_RE = re.compile(r"\s+")
+
+
+def normalise_text(value: str) -> str:
+    """Lowercase + squash spaces so matching is less fussy."""
+    return _WHITESPACE_RE.sub(" ", value.strip()).lower()
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,6 +37,18 @@ class MusicBrainzRecording:
     title: str
     artist: str
     tags: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class CachedEnrichment:
+    """What we stash in musicbrainz_cache for a local track."""
+
+    local_track_id: str
+    mbid: str | None
+    normalised_title: str
+    normalised_artist: str
+    tags: tuple[str, ...]
+    source_status: str
 
 
 class MusicBrainzClient:
@@ -137,3 +162,91 @@ class MusicBrainzClient:
         """Best hit, or None if MB found nothing."""
         hits = self.search_recording(artist=artist, title=title, limit=1)
         return hits[0] if hits else None
+
+
+def get_cached_enrichment(session: Session, local_track_id: str) -> CachedEnrichment | None:
+    row = session.get(MusicBrainzCache, local_track_id)
+    if row is None:
+        return None
+    return CachedEnrichment(
+        local_track_id=row.local_track_id,
+        mbid=row.mbid,
+        normalised_title=row.normalised_title,
+        normalised_artist=row.normalised_artist,
+        tags=tuple(row.tags or ()),
+        source_status=row.source_status,
+    )
+
+
+def upsert_enrichment_cache(
+    session: Session,
+    *,
+    track: TrackRecord,
+    recording: MusicBrainzRecording | None,
+    source_status: str = "ok",
+) -> CachedEnrichment:
+    """Write / update the cache row for this track."""
+    normalised_title = normalise_text(track.title)
+    normalised_artist = normalise_text(track.artist)
+    tags = list(recording.tags) if recording is not None else []
+    mbid = recording.mbid if recording is not None else None
+    raw_snippet = None
+    if recording is not None:
+        raw_snippet = json.dumps(
+            {
+                "mbid": recording.mbid,
+                "title": recording.title,
+                "artist": recording.artist,
+                "tags": list(recording.tags),
+            },
+            ensure_ascii=True,
+        )
+
+    existing = session.get(MusicBrainzCache, track.id)
+    if existing is None:
+        existing = MusicBrainzCache(local_track_id=track.id)
+        session.add(existing)
+
+    existing.mbid = mbid
+    existing.normalised_title = normalised_title
+    existing.normalised_artist = normalised_artist
+    existing.tags = tags
+    existing.source_status = source_status
+    existing.raw_snippet = raw_snippet
+    session.commit()
+    session.refresh(existing)
+
+    return CachedEnrichment(
+        local_track_id=existing.local_track_id,
+        mbid=existing.mbid,
+        normalised_title=existing.normalised_title,
+        normalised_artist=existing.normalised_artist,
+        tags=tuple(existing.tags or ()),
+        source_status=existing.source_status,
+    )
+
+
+def fetch_and_cache_enrichment(
+    session: Session,
+    track: TrackRecord,
+    client: MusicBrainzClient | None = None,
+) -> CachedEnrichment:
+    """
+    Ask MB about this track and save the result.
+
+    Raises MusicBrainzError on network/API fail — caller can ignore it.
+    """
+    owns_client = client is None
+    mb_client = client or MusicBrainzClient()
+    try:
+        recording = mb_client.lookup_best_recording(artist=track.artist, title=track.title)
+        status = "ok" if recording is not None else "not_found"
+        return upsert_enrichment_cache(
+            session,
+            track=track,
+            recording=recording,
+            source_status=status,
+        )
+    finally:
+        if owns_client:
+            mb_client.close()
