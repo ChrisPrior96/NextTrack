@@ -250,3 +250,49 @@ def fetch_and_cache_enrichment(
     finally:
         if owns_client:
             mb_client.close()
+
+
+@dataclass(frozen=True, slots=True)
+class EnrichedTrack:
+    """Local track plus optional MB tags (if we got any)."""
+
+    track: TrackRecord
+    enrichment: CachedEnrichment | None
+    used_external: bool
+
+    @property
+    def external_tags(self) -> tuple[str, ...]:
+        if self.enrichment is None:
+            return ()
+        return self.enrichment.tags
+
+
+def enrich_track(
+    session: Session,
+    track: TrackRecord,
+    *,
+    settings: Settings | None = None,
+    client: MusicBrainzClient | None = None,
+    force_refresh: bool = False,
+) -> EnrichedTrack:
+    """
+    Maybe enrich from MusicBrainz; if anything goes wrong just use local data.
+
+    Off → leave track alone.
+    Cache hit → reuse it.
+    Network/API error → still return the local track (do not blow up).
+    """
+    cfg = settings or get_settings()
+    if not cfg.musicbrainz_enabled:
+        return EnrichedTrack(track=track, enrichment=None, used_external=False)
+
+    if not force_refresh:
+        cached = get_cached_enrichment(session, track.id)
+        if cached is not None:
+            return EnrichedTrack(track=track, enrichment=cached, used_external=True)
+
+    try:
+        cached = fetch_and_cache_enrichment(session, track, client=client)
+        return EnrichedTrack(track=track, enrichment=cached, used_external=True)
+    except MusicBrainzError:
+        return EnrichedTrack(track=track, enrichment=None, used_external=False)
