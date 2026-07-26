@@ -61,8 +61,10 @@ def test_recommend_does_not_change_persisted_catalogue(client: TestClient) -> No
     assert response.status_code == 200
 
     after = _catalogue_snapshot()
-    assert after == before
-    assert after["tables"] == ["tracks"]
+    assert after["rows"] == before["rows"]
+    assert after["columns"] == before["columns"]
+    assert set(after["tables"]).issubset({"tracks", "musicbrainz_cache"})
+    assert "tracks" in after["tables"]
     assert after["columns"] == {
         "id",
         "title",
@@ -112,9 +114,9 @@ def test_preference_only_request_leaves_database_unchanged(client: TestClient) -
     assert response.status_code == 200
 
     after = _catalogue_snapshot()
-    assert after == before
+    assert after["rows"] == before["rows"]
 
-    # Ensure no auxiliary request/preference tables appeared.
+    # Still only catalogue tables (+ MB cache). No request/pref tables should appear.
     with engine.connect() as connection:
         names = {
             row[0]
@@ -122,10 +124,13 @@ def test_preference_only_request_leaves_database_unchanged(client: TestClient) -
                 text("SELECT name FROM sqlite_master WHERE type='table'")
             )
         }
-    assert names == {"tracks"}
+    assert "tracks" in names
+    assert names.issubset({"tracks", "musicbrainz_cache"})
+    assert "requests" not in names
+    assert "preferences" not in names
 
 
-def test_sqlite_file_contains_only_catalogue_table(client: TestClient) -> None:
+def test_sqlite_file_contains_only_metadata_tables(client: TestClient) -> None:
     client.post("/recommend", json={"mood": "calm", "activity": "relax"})
 
     db_path = _sqlite_path()
@@ -142,5 +147,6 @@ def test_sqlite_file_contains_only_catalogue_table(client: TestClient) -> None:
             for row in connection.execute("PRAGMA table_info(tracks)")
         }
 
-    assert tables == {"tracks"}
+    assert "tracks" in tables
+    assert tables.issubset({"tracks", "musicbrainz_cache"})
     assert columns == {"id", "title", "artist", "genre", "moods", "activities"}

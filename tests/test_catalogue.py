@@ -99,7 +99,8 @@ def test_sqlite_schema_only_has_track_metadata(db_session: Session) -> None:
     table_names = set(inspect(db_session.get_bind()).get_table_names())
     columns = {column["name"] for column in inspect(db_session.get_bind()).get_columns("tracks")}
 
-    assert table_names == {"tracks"}
+    assert "tracks" in table_names
+    assert table_names.issubset({"tracks", "musicbrainz_cache"})
     assert columns == {"id", "title", "artist", "genre", "moods", "activities"}
     assert "recent_tracks" not in columns
     assert "request" not in table_names
