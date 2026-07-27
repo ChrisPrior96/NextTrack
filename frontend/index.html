@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NextTrack — recommend demo</title>
+  </head>
+  <body>
+    <main class="shell">
+      <header class="brand">
+        <p class="eyebrow">Local demo</p>
+        <h1>NextTrack</h1>
+        <p class="lede">
+          Pick recent listening and optional preferences. Nothing is stored on the
+          server — this page only calls <code>POST /recommend</code>.
+        </p>
+      </header>
+
+      <form id="recommend-form" class="panel" novalidate>
+        <fieldset>
+          <legend>Recent tracks</legend>
+          <p class="hint">Select one or more catalogue tracks from this session.</p>
+          <div id="track-list" class="track-list" role="group" aria-label="Recent tracks"></div>
+        </fieldset>
+
+        <fieldset class="prefs">
+          <legend>Preferences</legend>
+          <label>
+            Mood
+            <select id="mood" name="mood">
+              <option value="">Any</option>
+            </select>
+          </label>
+          <label>
+            Activity
+            <select id="activity" name="activity">
+              <option value="">Any</option>
+            </select>
+          </label>
+          <label>
+            Genre
+            <select id="genre" name="genre">
+              <option value="">Any</option>
+            </select>
+          </label>
+          <label class="check">
+            <input id="avoid-artists" type="checkbox" name="avoid_repeated_artists" />
+            Avoid repeated artists
+          </label>
+        </fieldset>
+
+        <label class="api-url">
+          API base URL
+          <input id="api-base" type="url" value="http://127.0.0.1:8005" />
+        </label>
+
+        <button type="submit" id="submit-btn">Recommend next track</button>
+      </form>
+
+      <section id="status" class="status" aria-live="polite" hidden></section>
+      <section id="result" class="result" hidden></section>
+    </main>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
