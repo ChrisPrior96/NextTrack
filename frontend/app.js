@@ -93,12 +93,25 @@ function hideStatus() {
 
 function showResult(payload) {
   const track = payload.recommended_track;
+  const moods = (track.moods || []).map((item) => `<span class="tag">${escapeHtml(item)}</span>`).join("");
+  const activities = (track.activities || [])
+    .map((item) => `<span class="tag">${escapeHtml(item)}</span>`)
+    .join("");
+  const score =
+    typeof payload.score === "number" ? payload.score.toFixed(2) : String(payload.score);
+
   resultEl.hidden = false;
   resultEl.innerHTML = `
     <h2>Recommendation</h2>
     <p class="track-title">${escapeHtml(track.title)}</p>
     <p class="track-meta">${escapeHtml(track.artist)} · ${escapeHtml(track.genre)}</p>
     <p class="track-id">id: ${escapeHtml(track.id)}</p>
+    <div class="score-row">
+      <span class="score-label">Score</span>
+      <span class="score-value">${escapeHtml(score)}</span>
+    </div>
+    <p class="reason">${escapeHtml(payload.reason || "")}</p>
+    <div class="tags">${moods}${activities}</div>
   `;
 }
 
