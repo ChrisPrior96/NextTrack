@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Hardened error matrix, privacy tests, and marker-ready README
 - Offline evaluation scenarios and scored-vs-random baseline results ([docs/evaluation/RESULTS.md](docs/evaluation/RESULTS.md))
 - Optional MusicBrainz enrichment client with SQLite cache and fail-open offline behaviour
+- Minimal browser demo UI for recommend requests (`frontend/`)
 
 ### Changed
 
