@@ -1,4 +1,5 @@
-const CATALOGUE = [
+/** Fallback catalogue if GET /catalogue is unavailable (e.g. static-only preview). */
+const FALLBACK_CATALOGUE = [
   { id: "track_001", title: "Desk Lamp Glow", artist: "Nova Circuit", genre: "lo-fi" },
   { id: "track_002", title: "Quiet Keys", artist: "Nova Circuit", genre: "lo-fi" },
   { id: "track_003", title: "Late Assignment", artist: "Nova Circuit", genre: "lo-fi" },
@@ -31,11 +32,40 @@ const CATALOGUE = [
   { id: "track_030", title: "Soft Brass Rain", artist: "Elm Street Quartet", genre: "jazz" },
   { id: "track_031", title: "Focus Loop", artist: "Nova Circuit", genre: "lo-fi" },
   { id: "track_032", title: "Party Wire", artist: "Club Aster", genre: "dance" },
+  { id: "track_033", title: "Feather", artist: "Nujabes", genre: "lo-fi" },
+  { id: "track_034", title: "Aruarian Dance", artist: "Nujabes", genre: "lo-fi" },
+  { id: "track_035", title: "affection", artist: "Jinsang", genre: "lo-fi" },
+  { id: "track_036", title: "An Ending (Ascent)", artist: "Brian Eno", genre: "ambient" },
+  { id: "track_037", title: "Music for Airports 1/1", artist: "Brian Eno", genre: "ambient" },
+  { id: "track_038", title: "Xtal", artist: "Aphex Twin", genre: "ambient" },
+  { id: "track_039", title: "Digital Love", artist: "Daft Punk", genre: "electronic" },
+  { id: "track_040", title: "One More Time", artist: "Daft Punk", genre: "electronic" },
+  { id: "track_041", title: "Strobe", artist: "deadmau5", genre: "electronic" },
+  { id: "track_042", title: "Latch", artist: "Disclosure", genre: "dance" },
+  { id: "track_043", title: "Marea (we've lost dancing)", artist: "Fred again..", genre: "dance" },
+  { id: "track_044", title: "Feel So Close", artist: "Calvin Harris", genre: "dance" },
+  { id: "track_045", title: "Do I Wanna Know?", artist: "Arctic Monkeys", genre: "indie" },
+  { id: "track_046", title: "About You", artist: "The 1975", genre: "indie" },
+  { id: "track_047", title: "Electric Feel", artist: "MGMT", genre: "indie" },
+  { id: "track_048", title: "Holocene", artist: "Bon Iver", genre: "folk" },
+  { id: "track_049", title: "White Winter Hymnal", artist: "Fleet Foxes", genre: "folk" },
+  { id: "track_050", title: "The Night We Met", artist: "Lord Huron", genre: "folk" },
+  { id: "track_051", title: "Everlong", artist: "Foo Fighters", genre: "rock" },
+  { id: "track_052", title: "Seven Nation Army", artist: "The White Stripes", genre: "rock" },
+  { id: "track_053", title: "Mr. Brightside", artist: "The Killers", genre: "rock" },
+  { id: "track_054", title: "Don't Stop Me Now", artist: "Queen", genre: "rock" },
+  { id: "track_055", title: "So What", artist: "Miles Davis", genre: "jazz" },
+  { id: "track_056", title: "Blue in Green", artist: "Miles Davis", genre: "jazz" },
+  { id: "track_057", title: "Take Five", artist: "The Dave Brubeck Quartet", genre: "jazz" },
+  { id: "track_058", title: "My Favorite Things", artist: "John Coltrane", genre: "jazz" },
+  { id: "track_059", title: "Teardrop", artist: "Massive Attack", genre: "electronic" },
+  { id: "track_060", title: "Midnight City", artist: "M83", genre: "electronic" },
 ];
 
 const MOODS = ["happy", "sad", "excited", "bored", "calm", "energetic", "focused"];
 const ACTIVITIES = ["study", "work", "party", "relax", "workout", "commute"];
 const GENRES = ["lo-fi", "ambient", "electronic", "dance", "indie", "folk", "rock", "jazz"];
+const REAL_WORLD_FROM = 33;
 
 const form = document.getElementById("recommend-form");
 const trackList = document.getElementById("track-list");
@@ -47,6 +77,11 @@ const apiBaseInput = document.getElementById("api-base");
 const statusEl = document.getElementById("status");
 const resultEl = document.getElementById("result");
 const submitBtn = document.getElementById("submit-btn");
+const catalogueMeta = document.getElementById("catalogue-meta");
+const filterButtons = document.querySelectorAll("[data-filter]");
+
+let catalogue = FALLBACK_CATALOGUE.slice();
+let activeFilter = "real";
 
 function fillSelect(select, values) {
   for (const value of values) {
@@ -57,17 +92,56 @@ function fillSelect(select, values) {
   }
 }
 
+function trackOrdinal(trackId) {
+  const match = /^track_(\d+)$/.exec(trackId);
+  return match ? Number(match[1]) : 0;
+}
+
+function isRealWorld(track) {
+  return trackOrdinal(track.id) >= REAL_WORLD_FROM;
+}
+
+function filteredCatalogue() {
+  if (activeFilter === "real") {
+    return catalogue.filter(isRealWorld);
+  }
+  if (activeFilter === "demo") {
+    return catalogue.filter((track) => !isRealWorld(track));
+  }
+  return catalogue;
+}
+
 function renderTrackList() {
+  const selected = new Set(selectedTrackIds());
+  const tracks = filteredCatalogue();
   trackList.innerHTML = "";
-  for (const track of CATALOGUE) {
+
+  if (!tracks.length) {
+    const empty = document.createElement("p");
+    empty.className = "hint";
+    empty.textContent = "No tracks in this filter.";
+    trackList.appendChild(empty);
+    return;
+  }
+
+  for (const track of tracks) {
     const label = document.createElement("label");
     label.className = "track-option";
+    if (isRealWorld(track)) {
+      label.classList.add("is-real");
+    }
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.name = "recent_tracks";
     checkbox.value = track.id;
+    checkbox.checked = selected.has(track.id);
     const text = document.createElement("span");
-    text.textContent = `${track.title} — ${track.artist} (${track.genre})`;
+    const badge = isRealWorld(track)
+      ? `<span class="badge">real</span>`
+      : `<span class="badge badge-muted">fixture</span>`;
+    text.innerHTML = `${escapeHtml(track.title)} — ${escapeHtml(track.artist)} (${escapeHtml(
+      track.genre
+    )}) ${badge}`;
     label.append(checkbox, text);
     trackList.appendChild(label);
   }
@@ -89,6 +163,7 @@ function showStatus(message, isError = false) {
 function hideStatus() {
   statusEl.hidden = true;
   statusEl.textContent = "";
+  delete statusEl.dataset.tone;
 }
 
 function showResult(payload) {
@@ -99,6 +174,9 @@ function showResult(payload) {
     .join("");
   const score =
     typeof payload.score === "number" ? payload.score.toFixed(2) : String(payload.score);
+  const realNote = isRealWorld(track)
+    ? `<p class="track-note">Curated real recording from the expanded catalogue.</p>`
+    : `<p class="track-note">Synthetic demo fixture used for controlled evaluation.</p>`;
 
   resultEl.hidden = false;
   resultEl.innerHTML = `
@@ -106,6 +184,7 @@ function showResult(payload) {
     <p class="track-title">${escapeHtml(track.title)}</p>
     <p class="track-meta">${escapeHtml(track.artist)} · ${escapeHtml(track.genre)}</p>
     <p class="track-id">id: ${escapeHtml(track.id)}</p>
+    ${realNote}
     <div class="score-row">
       <span class="score-label">Score</span>
       <span class="score-value">${escapeHtml(score)}</span>
@@ -142,6 +221,32 @@ function buildBody() {
   };
 }
 
+function apiBase() {
+  return apiBaseInput.value.replace(/\/$/, "");
+}
+
+async function loadCatalogue() {
+  catalogueMeta.textContent = "Loading catalogue…";
+  try {
+    const response = await fetch(`${apiBase()}/catalogue`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const payload = await response.json();
+    if (!Array.isArray(payload.tracks) || !payload.tracks.length) {
+      throw new Error("Empty catalogue");
+    }
+    catalogue = payload.tracks;
+    const realCount = catalogue.filter(isRealWorld).length;
+    catalogueMeta.textContent = `${catalogue.length} tracks loaded from API · ${realCount} curated real recordings`;
+  } catch {
+    catalogue = FALLBACK_CATALOGUE.slice();
+    const realCount = catalogue.filter(isRealWorld).length;
+    catalogueMeta.textContent = `Using embedded fallback (${catalogue.length} tracks, ${realCount} real). Start the API for live catalogue.`;
+  }
+  renderTrackList();
+}
+
 async function onSubmit(event) {
   event.preventDefault();
   hideStatus();
@@ -155,12 +260,11 @@ async function onSubmit(event) {
     return;
   }
 
-  const base = apiBaseInput.value.replace(/\/$/, "");
   submitBtn.disabled = true;
   showStatus("Calling NextTrack…");
 
   try {
-    const response = await fetch(`${base}/recommend`, {
+    const response = await fetch(`${apiBase()}/recommend`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -185,5 +289,20 @@ async function onSubmit(event) {
 fillSelect(moodSelect, MOODS);
 fillSelect(activitySelect, ACTIVITIES);
 fillSelect(genreSelect, GENRES);
-renderTrackList();
+
+for (const button of filterButtons) {
+  button.addEventListener("click", () => {
+    activeFilter = button.dataset.filter;
+    for (const other of filterButtons) {
+      other.setAttribute("aria-pressed", String(other === button));
+    }
+    renderTrackList();
+  });
+}
+
 form.addEventListener("submit", onSubmit);
+apiBaseInput.addEventListener("change", () => {
+  loadCatalogue();
+});
+
+loadCatalogue();

@@ -95,10 +95,35 @@ legend {
   font-size: 0.92rem;
 }
 
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0 0 0.75rem;
+}
+
+.filter-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.4rem 0.7rem;
+  border: 1px solid var(--line);
+  background: #fffaf3;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.filter-btn[aria-pressed="true"] {
+  background: rgba(179, 74, 30, 0.12);
+  border-color: rgba(179, 74, 30, 0.35);
+  color: var(--accent-deep);
+}
+
 .track-list {
   display: grid;
   gap: 0.35rem;
-  max-height: 220px;
+  max-height: 320px;
   overflow: auto;
   padding-right: 0.25rem;
 }
@@ -245,6 +270,56 @@ button[type="submit"]:disabled {
   padding: 0.2rem 0.5rem;
   border: 1px solid var(--line);
   background: rgba(28, 23, 18, 0.04);
+}
+
+.badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.35rem;
+  border: 1px solid rgba(31, 107, 74, 0.35);
+  color: var(--ok);
+  vertical-align: middle;
+}
+
+.badge-muted {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+.track-note {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.limits {
+  margin-top: 1.5rem;
+  padding: 1.25rem 1.25rem 1.4rem;
+  animation: rise 0.9s ease 0.12s both;
+}
+
+.limits h2 {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.35rem;
+  margin: 0 0 0.65rem;
+}
+
+.limits p,
+.limits li {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.limits ul {
+  margin: 0.75rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.limits li + li {
+  margin-top: 0.35rem;
 }
 
 @keyframes rise {
