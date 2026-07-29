@@ -1,8 +1,13 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.core.config import get_settings
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 def create_app() -> FastAPI:
@@ -22,6 +27,13 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type"],
     )
     application.include_router(api_router)
+    # Static frontend last so it doesn't eat /health or /recommend.
+    if FRONTEND_DIR.is_dir():
+        application.mount(
+            "/",
+            StaticFiles(directory=FRONTEND_DIR, html=True),
+            name="frontend",
+        )
     return application
 
 
