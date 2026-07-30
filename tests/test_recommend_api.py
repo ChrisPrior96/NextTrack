@@ -69,7 +69,7 @@ def test_recommend_blank_recent_track_returns_422(client: TestClient) -> None:
 
 def test_recommend_no_candidates_returns_404(client: TestClient) -> None:
     # Wipe the whole catalogue from recent_tracks → should 404.
-    all_ids = [f"track_{index:03d}" for index in range(1, 33)]
+    all_ids = [f"track_{index:03d}" for index in range(1, 61)]
     response = client.post(
         "/recommend",
         json={"recent_tracks": all_ids},
