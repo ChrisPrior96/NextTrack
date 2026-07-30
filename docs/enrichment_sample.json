@@ -1,0 +1,91 @@
+{
+  "generated_at": "2026-08-10T10:37:58.694675+00:00",
+  "sample_size": 6,
+  "summary": {
+    "ok": 6,
+    "not_found": 0,
+    "error": 0
+  },
+  "tracks": [
+    {
+      "local_track_id": "track_033",
+      "title": "Feather",
+      "artist": "Nujabes",
+      "genre": "lo-fi",
+      "source_status": "ok",
+      "mbid": "9e694723-eab8-4250-81d2-6035d5d7577f",
+      "normalised_title": "feather",
+      "normalised_artist": "nujabes",
+      "tags": [],
+      "error": null
+    },
+    {
+      "local_track_id": "track_039",
+      "title": "Digital Love",
+      "artist": "Daft Punk",
+      "genre": "electronic",
+      "source_status": "ok",
+      "mbid": "75ea0cd7-41aa-433c-b8c4-fbbd49f21442",
+      "normalised_title": "digital love",
+      "normalised_artist": "daft punk",
+      "tags": [],
+      "error": null
+    },
+    {
+      "local_track_id": "track_045",
+      "title": "Do I Wanna Know?",
+      "artist": "Arctic Monkeys",
+      "genre": "indie",
+      "source_status": "ok",
+      "mbid": "98c2b337-e12e-4a1f-b8ba-9d67e6a70d04",
+      "normalised_title": "do i wanna know?",
+      "normalised_artist": "arctic monkeys",
+      "tags": [
+        "indie",
+        "indie rock",
+        "pop",
+        "rock"
+      ],
+      "error": null
+    },
+    {
+      "local_track_id": "track_051",
+      "title": "Everlong",
+      "artist": "Foo Fighters",
+      "genre": "rock",
+      "source_status": "ok",
+      "mbid": "009f7e7b-5ecf-4cef-a2c1-0f0c736e807e",
+      "normalised_title": "everlong",
+      "normalised_artist": "foo fighters",
+      "tags": [
+        "rock"
+      ],
+      "error": null
+    },
+    {
+      "local_track_id": "track_055",
+      "title": "So What",
+      "artist": "Miles Davis",
+      "genre": "jazz",
+      "source_status": "ok",
+      "mbid": "ad1b7371-089b-4288-b793-c2ed10855386",
+      "normalised_title": "so what",
+      "normalised_artist": "miles davis",
+      "tags": [],
+      "error": null
+    },
+    {
+      "local_track_id": "track_059",
+      "title": "Teardrop",
+      "artist": "Massive Attack",
+      "genre": "electronic",
+      "source_status": "ok",
+      "mbid": "c2cda56a-eb72-4ff3-bba4-225c2b626143",
+      "normalised_title": "teardrop",
+      "normalised_artist": "massive attack",
+      "tags": [],
+      "error": null
+    }
+  ],
+  "notes": "Hand-picked real catalogue tracks looked up against MusicBrainz WS/2. Results are cached in musicbrainz_cache and do not change recommend scoring."
+}
