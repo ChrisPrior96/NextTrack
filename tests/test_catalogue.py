@@ -19,7 +19,7 @@ from app.services.catalogue import (
 
 
 SEED_PATH = Path(__file__).resolve().parents[1] / "app" / "data" / "tracks.json"
-EXPECTED_TRACK_COUNT = 32
+EXPECTED_TRACK_COUNT = 60
 
 
 @pytest.fixture

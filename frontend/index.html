@@ -12,15 +12,27 @@
         <p class="eyebrow">Local demo</p>
         <h1>NextTrack</h1>
         <p class="lede">
-          Pick recent listening and optional preferences. Nothing is stored on the
-          server — this page only calls <code>POST /recommend</code>.
+          Pick recent listening from a mixed catalogue of synthetic fixtures and
+          curated real recordings, then call <code>POST /recommend</code>. Nothing
+          is stored on the server.
         </p>
       </header>
 
       <form id="recommend-form" class="panel" novalidate>
         <fieldset>
           <legend>Recent tracks</legend>
-          <p class="hint">Select one or more catalogue tracks from this session.</p>
+          <p class="hint" id="catalogue-meta">Loading catalogue…</p>
+          <div class="filter-row" role="group" aria-label="Catalogue filter">
+            <button type="button" class="filter-btn" data-filter="real" aria-pressed="true">
+              Real recordings
+            </button>
+            <button type="button" class="filter-btn" data-filter="demo" aria-pressed="false">
+              Demo fixtures
+            </button>
+            <button type="button" class="filter-btn" data-filter="all" aria-pressed="false">
+              All
+            </button>
+          </div>
           <div id="track-list" class="track-list" role="group" aria-label="Recent tracks"></div>
         </fieldset>
 
@@ -60,6 +72,28 @@
 
       <section id="status" class="status" aria-live="polite" hidden></section>
       <section id="result" class="result" hidden></section>
+
+      <section class="limits panel" aria-labelledby="limits-heading">
+        <h2 id="limits-heading">Limitations &amp; future work</h2>
+        <p>
+          The catalogue is intentionally small and curated (~60 tracks): synthetic
+          fixtures for reproducible evaluation plus hand-picked real recordings for
+          a more recognisable demo. Scoring still uses local mood/activity/genre
+          tags — not streaming history or collaborative filtering.
+        </p>
+        <p>
+          A sample of real tracks was looked up against MusicBrainz and cached in
+          <code>musicbrainz_cache</code>. Enrichment is optional, rate-limited, and
+          fails open; it does not drive ranking yet. See
+          <code>docs/LIMITATIONS.md</code> and
+          <code>docs/enrichment_sample.json</code> for the attempt and results.
+        </p>
+        <ul>
+          <li>Scale catalogue ingestion while keeping privacy (no user history in DB).</li>
+          <li>Use cached MusicBrainz tags as soft scoring signals when available.</li>
+          <li>Add audio-feature or playlist continuity signals beyond metadata tags.</li>
+        </ul>
+      </section>
     </main>
 
     <script src="./app.js" defer></script>

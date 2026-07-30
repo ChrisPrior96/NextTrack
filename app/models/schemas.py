@@ -102,3 +102,12 @@ class RecommendResponse(BaseModel):
         description="Short human-readable explanation of why the track was chosen.",
         examples=["Matches focused study listening with lo-fi preference."],
     )
+
+
+class CatalogueResponse(BaseModel):
+    """Full catalogue dump for the demo."""
+
+    tracks: list[TrackSummary] = Field(
+        description="Every persisted catalogue track, ordered by id."
+    )
+    count: int = Field(description="Number of tracks in the catalogue.", examples=[60])

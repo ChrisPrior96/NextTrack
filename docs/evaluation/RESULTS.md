@@ -4,6 +4,7 @@ Offline comparison of NextTrack scored recommendations against a **random eligib
 
 ## Method
 
+- Catalogue: 60 curated tracks (32 synthetic fixtures + 28 real recordings)
 - Scenarios: `tests/evaluation/scenarios.json` (9 cases)
 - Runner: `python scripts/run_evaluation.py --seed 42`
 - For each scenario:
@@ -19,15 +20,15 @@ Offline comparison of NextTrack scored recommendations against a **random eligib
 
 | scenario | scored_id | random_id* | scored_score | random_score_avg | score_gap | pref_hit_scored | pref_hit_random | artist_repeat_scored | artist_repeat_random |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| study_focused_lofi_history | track_002 | track_031 | 9.00 | 9.00 | 0.00 | 1.00 | 1.00 | 1.00 | 1.00 |
-| party_excited_electronic_history | track_010 | track_010 | 9.00 | 9.00 | 0.00 | 1.00 | 1.00 | 1.00 | 1.00 |
-| preferences_only_no_history | track_004 | track_006 | 8.00 | 8.00 | 0.00 | 1.00 | 1.00 | 0.00 | 0.00 |
-| history_only_no_prefs | track_025 | track_009 | 1.00 | 0.08 | 0.92 | 0.00 | 0.00 | 1.00 | 0.08 |
-| avoid_repeated_artists_on | track_005 | track_021 | 5.00 | 5.00 | 0.00 | 1.00 | 1.00 | 0.00 | 0.00 |
-| conflicting_prefs_fallback | track_017 | track_027 | -0.50 | -1.46 | 0.96 | 0.33 | 0.33 | 1.00 | 0.04 |
-| long_history_near_exhaustion | track_030 | track_030 | 6.00 | 6.00 | 0.00 | 1.00 | 1.00 | 1.00 | 1.00 |
-| genre_continuity_from_last_track | track_028 | track_023 | 1.00 | 0.00 | 1.00 | 0.00 | 0.00 | 1.00 | 0.16 |
-| workout_energetic_rock | track_025 | track_025 | 9.00 | 9.00 | 0.00 | 1.00 | 1.00 | 1.00 | 1.00 |
+| study_focused_lofi_history | track_033 | track_002 | 10.50 | 9.54 | 0.96 | 1.00 | 1.00 | 0.00 | 0.64 |
+| party_excited_electronic_history | track_039 | track_040 | 10.50 | 10.02 | 0.48 | 1.00 | 1.00 | 0.00 | 0.32 |
+| preferences_only_no_history | track_004 | track_004 | 8.00 | 8.00 | 0.00 | 1.00 | 1.00 | 0.00 | 0.00 |
+| history_only_no_prefs | track_051 | track_005 | 2.50 | 0.30 | 2.20 | 0.00 | 0.00 | 0.00 | 0.00 |
+| avoid_repeated_artists_on | track_033 | track_035 | 7.50 | 5.60 | 1.90 | 1.00 | 1.00 | 0.00 | 0.00 |
+| conflicting_prefs_fallback | track_047 | track_017 | 1.00 | -1.42 | 2.42 | 0.33 | 0.33 | 0.00 | 0.08 |
+| long_history_near_exhaustion | track_059 | track_059 | 6.50 | 6.50 | 0.00 | 1.00 | 1.00 | 0.00 | 0.00 |
+| genre_continuity_from_last_track | track_055 | track_014 | 2.50 | 0.16 | 2.34 | 0.00 | 0.00 | 0.00 | 0.08 |
+| workout_energetic_rock | track_051 | track_052 | 10.50 | 9.78 | 0.72 | 1.00 | 1.00 | 0.00 | 0.48 |
 
 \* `random_id` is the first draw only; `random_score_avg` uses all draws.
 
@@ -36,19 +37,19 @@ Offline comparison of NextTrack scored recommendations against a **random eligib
 | Metric | Value |
 |--------|------:|
 | Scenarios | 9 |
-| Mean score gap (scored − random) | **0.320** |
+| Mean score gap (scored − random) | **1.224** |
 | Mean preference hit-rate (scored) | 0.704 |
 | Mean preference hit-rate (random) | 0.704 |
-| Artist repeat-rate (scored) | 0.778 |
-| Artist repeat-rate (random) | 0.476 |
-| Share of scenarios where scored beat random on score | **0.333** |
+| Artist repeat-rate (scored) | 0.000 |
+| Artist repeat-rate (random) | 0.178 |
+| Share of scenarios where scored beat random on score | **0.778** |
 
 ## Interpretation
 
-- When preferences produce a **tight exact-match pool**, scored and random eligible picks often share the same high score (gap ≈ 0). That is expected: Phase 3 already filtered well.
-- Where the eligible set is **broader** (history-only, conflicting prefs, genre continuity), scoring beats random on total score (positive gaps of ~0.9–1.0).
-- Preference hit-rates match when the candidate pool is homogeneous on those preferences.
-- Scored picks repeat recent artists more often because soft artist continuity is an intentional positive signal (offset by the soft repeat penalty). With `avoid_repeated_artists=true`, both sides stay at 0.00 repeats.
+- Expanding the catalogue with curated real recordings widens many eligible pools, so scoring has more room to beat random (mean gap **1.224**, scored ahead in **7/9** scenarios).
+- When the remaining pool is tiny (near-exhaustion) or preference filtering already collapses to a single high-scoring cluster, gap can still be ≈ 0.
+- Preference hit-rates stay matched when Phase 3 already filtered to preference-homogeneous candidates.
+- Scored artist-repeat rate is low here because several winning real tracks introduce artists not present in the short history; random draws still hit repeats more often in denser genre pools.
 
 Re-run anytime with:
 

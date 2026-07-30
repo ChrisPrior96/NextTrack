@@ -112,7 +112,13 @@
         "track_011", "track_012", "track_013", "track_014", "track_015",
         "track_016", "track_017", "track_018", "track_019", "track_020",
         "track_021", "track_022", "track_023", "track_024", "track_025",
-        "track_026", "track_027", "track_028", "track_029"
+        "track_026", "track_027", "track_028", "track_029", "track_030",
+        "track_031", "track_032", "track_033", "track_034", "track_035",
+        "track_036", "track_037", "track_038", "track_039", "track_040",
+        "track_041", "track_042", "track_043", "track_044", "track_045",
+        "track_046", "track_047", "track_048", "track_049", "track_050",
+        "track_051", "track_052", "track_053", "track_054", "track_055",
+        "track_056", "track_057"
       ],
       "mood": "calm",
       "activity": "relax",
@@ -121,7 +127,7 @@
     },
     "expectations": {
       "recommended_not_in_recent": true,
-      "allowed_ids": ["track_030", "track_031", "track_032"],
+      "allowed_ids": ["track_058", "track_059", "track_060"],
       "min_preference_hits": 0
     }
   },
