@@ -17,6 +17,8 @@ class ScoringWeights:
     continuity_last_genre: float = 1.0
     soft_artist_repeat_penalty: float = -2.0
     preference_conflict: float = -4.0
+    # How fast older history fades (1.0 = no fade, 0.7 = each step back keeps 70%).
+    recency_decay: float = 0.7
 
 
 DEFAULT_WEIGHTS = ScoringWeights()
