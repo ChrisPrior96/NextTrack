@@ -250,3 +250,43 @@ def test_last_track_genre_uses_last_resolvable_id() -> None:
         recent_tracks=["t1", "missing", "t2"],
     )
     assert context.last_track_genre == "rock"
+
+
+def test_recency_decay_prefers_newer_genre_match() -> None:
+    catalogue = [
+        _track("old", artist="A", genre="jazz"),
+        _track("new", artist="B", genre="rock"),
+        _track("cand_jazz", artist="C", genre="jazz"),
+        _track("cand_rock", artist="D", genre="rock"),
+    ]
+    # History oldest → newest: jazz then rock. Rock match should keep full weight;
+    # jazz match is one step older so it gets decayed.
+    context = build_scoring_context(
+        catalogue,
+        recent_tracks=["old", "new"],
+    )
+    jazz_score = score_track(catalogue[2], context)
+    rock_score = score_track(catalogue[3], context)
+
+    assert jazz_score.components["shared_genre_with_recent"] == 1.5 * 0.7
+    assert rock_score.components["shared_genre_with_recent"] == 1.5
+    assert rock_score.components["continuity_last_genre"] == 1.0
+    assert jazz_score.components["continuity_last_genre"] == 0.0
+    assert rock_score.total > jazz_score.total
+
+
+def test_recency_decay_scales_artist_repeat_signals() -> None:
+    catalogue = [
+        _track("old", artist="Alpha", genre="lo-fi"),
+        _track("mid", artist="Beta", genre="indie"),
+        _track("cand", artist="Alpha", genre="folk"),
+    ]
+    context = build_scoring_context(
+        catalogue,
+        recent_tracks=["old", "mid"],
+        avoid_repeated_artists=False,
+    )
+    breakdown = score_track(catalogue[2], context)
+    # Alpha appears one step back from newest → scale 0.7
+    assert breakdown.components["shared_artist_with_recent"] == 0.5 * 0.7
+    assert breakdown.components["soft_artist_repeat_penalty"] == -2.0 * 0.7

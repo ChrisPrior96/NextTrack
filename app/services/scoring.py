@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 
 from app.core.scoring_weights import DEFAULT_WEIGHTS, ScoringWeights
@@ -18,6 +18,8 @@ class ScoringContext:
     activity: str | None = None
     genre: str | None = None
     avoid_repeated_artists: bool = False
+    # Resolved history in request order (oldest → newest). Used for recency decay.
+    recent_history: tuple[TrackRecord, ...] = ()
     recent_genres: frozenset[str] = field(default_factory=frozenset)
     recent_artists: frozenset[str] = field(default_factory=frozenset)
     last_track_genre: str | None = None
@@ -46,22 +48,19 @@ def build_scoring_context(
 ) -> ScoringContext:
     """Look up genres/artists for the recent_tracks ids."""
     by_id = {track.id: track for track in catalogue}
+    history: list[TrackRecord] = []
     recent_genres: set[str] = set()
     recent_artists: set[str] = set()
-    last_track_genre: str | None = None
 
     for track_id in recent_tracks:
         track = by_id.get(track_id)
         if track is None:
             continue
+        history.append(track)
         recent_genres.add(track.genre)
         recent_artists.add(track.artist)
 
-    for track_id in reversed(recent_tracks):
-        track = by_id.get(track_id)
-        if track is not None:
-            last_track_genre = track.genre
-            break
+    last_track_genre = history[-1].genre if history else None
 
     return ScoringContext(
         recent_tracks=tuple(recent_tracks),
@@ -69,10 +68,43 @@ def build_scoring_context(
         activity=activity,
         genre=genre,
         avoid_repeated_artists=avoid_repeated_artists,
+        recent_history=tuple(history),
         recent_genres=frozenset(recent_genres),
         recent_artists=frozenset(recent_artists),
         last_track_genre=last_track_genre,
     )
+
+
+def _recency_scale(steps_from_newest: int, decay: float) -> float:
+    """1.0 for the newest history item, then decay for each step older."""
+    if steps_from_newest < 0:
+        return 0.0
+    factor = min(max(decay, 0.0), 1.0)
+    return factor**steps_from_newest
+
+
+def _best_history_recency(
+    history: Sequence[TrackRecord],
+    *,
+    decay: float,
+    matches: Callable[[TrackRecord], bool],
+) -> float:
+    """
+    Strongest recency scale for any matching history track.
+
+    Newest match wins (scale closer to 1.0). Returns 0.0 when nothing matches.
+    """
+    if not history:
+        return 0.0
+    best = 0.0
+    last_index = len(history) - 1
+    for index, past in enumerate(history):
+        if not matches(past):
+            continue
+        scale = _recency_scale(last_index - index, decay)
+        if scale > best:
+            best = scale
+    return best
 
 
 def _has_preference_conflict(track: TrackRecord, context: ScoringContext) -> bool:
@@ -115,13 +147,28 @@ def score_track(
     if context.activity is not None and context.activity in track.activities:
         components["activity_match"] = weights.activity_match
 
-    if track.genre in context.recent_genres:
-        components["shared_genre_with_recent"] = weights.shared_genre_with_recent
+    genre_scale = _best_history_recency(
+        context.recent_history,
+        decay=weights.recency_decay,
+        matches=lambda past: past.genre == track.genre,
+    )
+    if genre_scale > 0.0:
+        components["shared_genre_with_recent"] = (
+            weights.shared_genre_with_recent * genre_scale
+        )
 
-    artist_in_history = track.artist in context.recent_artists
-    if artist_in_history and not context.avoid_repeated_artists:
-        components["shared_artist_with_recent"] = weights.shared_artist_with_recent
-        components["soft_artist_repeat_penalty"] = weights.soft_artist_repeat_penalty
+    artist_scale = _best_history_recency(
+        context.recent_history,
+        decay=weights.recency_decay,
+        matches=lambda past: past.artist == track.artist,
+    )
+    if artist_scale > 0.0 and not context.avoid_repeated_artists:
+        components["shared_artist_with_recent"] = (
+            weights.shared_artist_with_recent * artist_scale
+        )
+        components["soft_artist_repeat_penalty"] = (
+            weights.soft_artist_repeat_penalty * artist_scale
+        )
 
     if (
         context.last_track_genre is not None
