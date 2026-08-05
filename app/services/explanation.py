@@ -14,6 +14,7 @@ _COMPONENT_LABELS = {
     "continuity_last_genre": "keeps continuity with your last track's genre",
     "soft_artist_repeat_penalty": "soft penalty for repeating a recent artist",
     "preference_conflict": "only partially matches your stated preferences",
+    "external_tag_match": "picks up a matching tag from cached MusicBrainz metadata",
 }
 
 
