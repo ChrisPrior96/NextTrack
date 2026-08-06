@@ -290,3 +290,25 @@ def test_recency_decay_scales_artist_repeat_signals() -> None:
     # Alpha appears one step back from newest → scale 0.7
     assert breakdown.components["shared_artist_with_recent"] == 0.5 * 0.7
     assert breakdown.components["soft_artist_repeat_penalty"] == -2.0 * 0.7
+
+
+def test_external_tag_match_boosts_when_cache_overlaps_mood() -> None:
+    track = _track("t1", artist="X", genre="electronic", moods=("calm",))
+    context = ScoringContext(
+        mood="calm",
+        external_tags_by_id={"t1": ("chillout", "calm", "downtempo")},
+    )
+    breakdown = score_track(track, context)
+    assert breakdown.components["mood_match"] == 2.5
+    assert breakdown.components["external_tag_match"] == 1.0
+    assert breakdown.total == 3.5
+
+
+def test_external_tag_match_ignored_when_no_overlap() -> None:
+    track = _track("t1", artist="X", genre="rock")
+    context = ScoringContext(
+        mood="focused",
+        external_tags_by_id={"t1": ("punk", "live")},
+    )
+    breakdown = score_track(track, context)
+    assert breakdown.components["external_tag_match"] == 0.0

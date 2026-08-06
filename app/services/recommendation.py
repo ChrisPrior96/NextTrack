@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from app.core.scoring_weights import DEFAULT_WEIGHTS, ScoringWeights
@@ -52,6 +52,7 @@ def recommend_track(
     genre: str | None = None,
     avoid_repeated_artists: bool = False,
     weights: ScoringWeights = DEFAULT_WEIGHTS,
+    external_tags_by_id: Mapping[str, tuple[str, ...]] | None = None,
 ) -> RecommendationResult:
     """
     Select the top-scoring eligible track for the request context.
@@ -78,6 +79,7 @@ def recommend_track(
         activity=activity,
         genre=genre,
         avoid_repeated_artists=avoid_repeated_artists,
+        external_tags_by_id=external_tags_by_id,
     )
     ranked = rank_candidates(candidates, context, weights)
     top = ranked[0]
@@ -106,13 +108,27 @@ def recommend_from_catalogue(
     weights: ScoringWeights = DEFAULT_WEIGHTS,
 ) -> RecommendationResult:
     """Load catalogue from DB then recommend."""
+    from app.core.config import get_settings
     from app.db.seed import seed_database
+    from app.db.session import SessionLocal
     from app.services.catalogue import get_all
+    from app.services.musicbrainz import get_cached_enrichment
 
     seed_database()
     catalogue = get_all()
     if not catalogue:
         raise NoCandidatesError("Catalogue is empty")
+
+    tag_map: dict[str, tuple[str, ...]] = {}
+    settings = get_settings()
+    if settings.musicbrainz_enabled:
+        # Soft tag boosts only — never required for a recommendation.
+        with SessionLocal() as session:
+            for track in catalogue:
+                cached = get_cached_enrichment(session, track.id)
+                if cached is not None and cached.tags:
+                    tag_map[track.id] = tuple(cached.tags)
+
     return recommend_track(
         catalogue,
         recent_tracks=recent_tracks,
@@ -121,4 +137,5 @@ def recommend_from_catalogue(
         genre=genre,
         avoid_repeated_artists=avoid_repeated_artists,
         weights=weights,
+        external_tags_by_id=tag_map or None,
     )

@@ -23,6 +23,8 @@ class ScoringContext:
     recent_genres: frozenset[str] = field(default_factory=frozenset)
     recent_artists: frozenset[str] = field(default_factory=frozenset)
     last_track_genre: str | None = None
+    # Optional MusicBrainz tags keyed by catalogue track id.
+    external_tags_by_id: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +47,7 @@ def build_scoring_context(
     activity: str | None = None,
     genre: str | None = None,
     avoid_repeated_artists: bool = False,
+    external_tags_by_id: Mapping[str, tuple[str, ...]] | None = None,
 ) -> ScoringContext:
     """Look up genres/artists for the recent_tracks ids."""
     by_id = {track.id: track for track in catalogue}
@@ -72,6 +75,7 @@ def build_scoring_context(
         recent_genres=frozenset(recent_genres),
         recent_artists=frozenset(recent_artists),
         last_track_genre=last_track_genre,
+        external_tags_by_id=dict(external_tags_by_id or {}),
     )
 
 
@@ -121,6 +125,24 @@ def _has_preference_conflict(track: TrackRecord, context: ScoringContext) -> boo
     return not all(checks)
 
 
+def _external_tag_boost(
+    track: TrackRecord,
+    context: ScoringContext,
+    weights: ScoringWeights,
+) -> float:
+    """Small boost if cached external tags overlap mood/activity words."""
+    tags = context.external_tags_by_id.get(track.id, ())
+    if not tags:
+        return 0.0
+    normalised = {tag.strip().lower() for tag in tags if tag and tag.strip()}
+    hit = False
+    if context.mood is not None and context.mood.lower() in normalised:
+        hit = True
+    if context.activity is not None and context.activity.lower() in normalised:
+        hit = True
+    return weights.external_tag_match if hit else 0.0
+
+
 def score_track(
     track: TrackRecord,
     context: ScoringContext,
@@ -136,6 +158,7 @@ def score_track(
         "continuity_last_genre": 0.0,
         "soft_artist_repeat_penalty": 0.0,
         "preference_conflict": 0.0,
+        "external_tag_match": 0.0,
     }
 
     if context.genre is not None and track.genre == context.genre:
@@ -178,6 +201,8 @@ def score_track(
 
     if _has_preference_conflict(track, context):
         components["preference_conflict"] = weights.preference_conflict
+
+    components["external_tag_match"] = _external_tag_boost(track, context, weights)
 
     total = sum(components.values())
     return ScoreBreakdown(total=total, components=components)

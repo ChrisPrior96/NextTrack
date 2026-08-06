@@ -20,6 +20,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Minimal browser demo UI for recommend requests (`frontend/`)
 - Expanded curated catalogue (~60 tracks) with real recordings, `GET /catalogue`, and a MusicBrainz enrichment sample ([docs/enrichment_sample.json](docs/enrichment_sample.json))
 - Recency decay on history genre/artist scoring signals (newer listening counts more)
+- Optional soft score boost from cached MusicBrainz tags when enrichment is enabled
 
 ### Changed
 

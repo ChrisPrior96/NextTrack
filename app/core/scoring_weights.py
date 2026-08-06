@@ -19,6 +19,8 @@ class ScoringWeights:
     preference_conflict: float = -4.0
     # How fast older history fades (1.0 = no fade, 0.7 = each step back keeps 70%).
     recency_decay: float = 0.7
+    # Small boost when MusicBrainz cache tags overlap mood/activity.
+    external_tag_match: float = 1.0
 
 
 DEFAULT_WEIGHTS = ScoringWeights()
