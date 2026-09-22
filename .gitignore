@@ -45,7 +45,7 @@ Thumbs.db
 
 # Local project docs (kept on disk, not versioned)
 docs/DEVELOPMENT.md
-
-README.md
 docs/ARCHITECTURE.md
 docs/LIMITATIONS.md
+docs/PHASE_NOTES.md
+README.md
